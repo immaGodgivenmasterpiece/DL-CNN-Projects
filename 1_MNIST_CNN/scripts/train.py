@@ -4,9 +4,11 @@ train.py
 End-to-end training script for MNIST CNN.
 
 Usage (from project root):
-    python scripts/train.py
+    python scripts/train.py            # fresh training (random init)
+    python scripts/train.py --resume   # continue from best_model.pth
 """
 
+import argparse
 import os
 import torch
 import torch.nn as nn
@@ -16,6 +18,15 @@ from torch.utils.data import DataLoader
 
 from model import SimpleCNN
 from utils import train, evaluate, plot_history, plot_confusion_matrix, plot_wrong_predictions
+
+
+# ─────────────────────────────────────────
+# Args
+# ─────────────────────────────────────────
+parser = argparse.ArgumentParser()
+parser.add_argument('--resume', action='store_true',
+                    help='Resume training from best_model.pth instead of random init')
+args = parser.parse_args()
 
 
 # ─────────────────────────────────────────
@@ -51,6 +62,16 @@ model     = SimpleCNN()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
+best_model_path = os.path.join(RESULTS_DIR, 'best_model.pth')
+
+if args.resume and os.path.exists(best_model_path):
+    model.load_state_dict(torch.load(best_model_path, weights_only=True))
+    print(f"Resumed from {best_model_path}")
+else:
+    if args.resume:
+        print("No checkpoint found, starting fresh.")
+    print("Training from random initialization.")
+
 
 # ─────────────────────────────────────────
 # Training loop with Early Stopping
@@ -59,7 +80,6 @@ best_acc      = 0.0
 counter       = 0
 train_losses, test_losses = [], []
 train_accs,   test_accs   = [], []
-best_model_path = os.path.join(RESULTS_DIR, 'best_model.pth')
 
 for epoch in range(EPOCHS):
     tr_loss, tr_acc = train(model, train_loader, criterion, optimizer)
@@ -85,7 +105,7 @@ for epoch in range(EPOCHS):
             break
 
 # Load best weights
-model.load_state_dict(torch.load(best_model_path))
+model.load_state_dict(torch.load(best_model_path, weights_only=True))
 print("Best model loaded!")
 
 # Save loss/acc curves

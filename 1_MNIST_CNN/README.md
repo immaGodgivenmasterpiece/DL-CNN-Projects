@@ -108,8 +108,18 @@ These are the hardest cases for any MNIST model and reflect real visual ambiguit
 
 ```bash
 # From the 1_MNIST_CNN/ directory
-python scripts/train.py
+python scripts/train.py            # fresh training (random init)
+python scripts/train.py --resume   # continue from best_model.pth
 ```
+
+- **Default**: Random initialization → train from scratch
+- **`--resume`**: Load previous checkpoint and continue training
+
+After training, the following are saved to `results/`:
+- `best_model.pth` — best checkpoint
+- `loss_acc_curves.png` — loss/accuracy curves
+- `confusion_matrix.png` — confusion matrix
+- `wrong_predictions.png` — wrong prediction gallery
 
 Or open `notebooks/CNN-MNIST-pytorch.ipynb` in Google Colab and run all cells.
 
