@@ -1,0 +1,13 @@
+# Data (too large for git)
+data/
+*.pth
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+
+# OS
+.DS_Store
+
