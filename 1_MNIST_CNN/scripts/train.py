@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
 from model import SimpleCNN
-from utils import train, evaluate, plot_history
+from utils import train, evaluate, plot_history, plot_confusion_matrix, plot_wrong_predictions
 
 
 # ─────────────────────────────────────────
@@ -93,4 +93,16 @@ plot_history(
     train_losses, test_losses,
     train_accs,   test_accs,
     save_path=os.path.join(RESULTS_DIR, 'loss_acc_curves.png')
+)
+
+# Save confusion matrix
+plot_confusion_matrix(
+    model, test_loader,
+    save_path=os.path.join(RESULTS_DIR, 'confusion_matrix.png')
+)
+
+# Save wrong predictions gallery
+plot_wrong_predictions(
+    model, test_loader, n=16,
+    save_path=os.path.join(RESULTS_DIR, 'wrong_predictions.png')
 )

@@ -14,13 +14,13 @@ Built as the first project in a progressive CNN learning series.
 | Final Train Accuracy | 99.31% |
 
 ### Loss & Accuracy Curves
-*(Add your saved `results/loss_acc_curves.png` here)*
+![Loss & Accuracy Curves](results/loss_acc_curves.png)
 
 ### Confusion Matrix
-*(Add your saved `results/confusion_matrix.png` here)*
+![Confusion Matrix](results/confusion_matrix.png)
 
 ### Wrong Predictions Gallery
-*(Add your saved `results/wrong_predictions.png` here)*
+![Wrong Predictions](results/wrong_predictions.png)
 
 ---
 
