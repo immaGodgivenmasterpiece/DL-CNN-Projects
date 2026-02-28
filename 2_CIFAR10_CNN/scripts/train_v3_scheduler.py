@@ -1,0 +1,95 @@
+import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+from model import CIFAR10_CNN_BN
+from utils import (get_device, get_dataloaders, train_one_epoch, evaluate,
+                   plot_history, plot_confusion_matrix, plot_wrong_predictions)
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)                    # 2_CIFAR10_CNN/
+RESULTS_DIR = os.path.join(PROJECT_DIR, "results", "v3_scheduler")
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+BEST_MODEL_PATH = os.path.join(RESULTS_DIR, "best_model.pth")
+
+
+# ── Training Loop ─────────────────────────────────────────────────────────────
+def main():
+    device = get_device()
+    print(f"Using device: {device}")
+
+    # Data
+    train_loader, test_loader = get_dataloaders(batch_size=64)
+
+    # Model
+    model = CIFAR10_CNN_BN().to(device)
+
+    # Loss & Optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # ReduceLROnPlateau: val acc 기준, 3 epoch 개선 없으면 LR 절반
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='max',     # accuracy based (higher is better)
+        factor=0.5,     # LR *= 0.5
+        patience=3,     # 3 epochs without improvement
+    )
+
+    # Hyperparams
+    EPOCHS  = 20
+    PATIENCE = 5
+
+    # History
+    train_losses, test_losses = [], []
+    train_accs,   test_accs   = [], []
+
+    # Early stopping state
+    best_acc = 0.0
+    counter  = 0
+
+    for epoch in range(EPOCHS):
+        tr_loss, tr_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        te_loss, te_acc = evaluate(model, test_loader, criterion, device)
+
+        scheduler.step(te_acc)
+
+        train_losses.append(tr_loss);  test_losses.append(te_loss)
+        train_accs.append(tr_acc);     test_accs.append(te_acc)
+
+        print(f"Epoch [{epoch+1}/{EPOCHS}]")
+        print(f"  LR: {optimizer.param_groups[0]['lr']:.6f}")
+        print(f"  Train Loss: {tr_loss:.4f} | Train Acc: {tr_acc:.2f}%")
+        print(f"  Test  Loss: {te_loss:.4f} | Test  Acc: {te_acc:.2f}%")
+
+        # Early stopping + best model save
+        if te_acc > best_acc:
+            best_acc = te_acc
+            counter  = 0
+            torch.save(model.state_dict(), BEST_MODEL_PATH)
+            print(f"  ✓ Best model saved (acc: {best_acc:.2f}%)")
+        else:
+            counter += 1
+            print(f"  patience: {counter}/{PATIENCE}")
+            if counter >= PATIENCE:
+                print(f"\nEarly stopping triggered. Best Test Acc: {best_acc:.2f}%")
+                break
+
+    # Load best model
+    model.load_state_dict(torch.load(BEST_MODEL_PATH))
+    print("\nBest model loaded!")
+
+    # Visualize
+    plot_history(train_losses, test_losses, train_accs, test_accs,
+                 save_path=os.path.join(RESULTS_DIR, "loss_acc_curves.png"))
+    plot_confusion_matrix(model, test_loader, device,
+                          save_path=os.path.join(RESULTS_DIR, "confusion_matrix.png"))
+    plot_wrong_predictions(model, test_loader, device, n=16,
+                           save_path=os.path.join(RESULTS_DIR, "wrong_predictions.png"))
+
+
+if __name__ == "__main__":
+    main()
