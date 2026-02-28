@@ -1,4 +1,5 @@
 import os
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -18,6 +19,11 @@ BEST_MODEL_PATH = os.path.join(RESULTS_DIR, "best_model.pth")
 
 # ── Training Loop ─────────────────────────────────────────────────────────────
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--resume-from", type=str, default=None,
+                        help="Path to a .pth checkpoint to resume training from")
+    args = parser.parse_args()
+
     device = get_device()
     print(f"Using device: {device}")
 
@@ -27,11 +33,15 @@ def main():
     # Model
     model = CIFAR10_CNN_BN().to(device)
 
+    if args.resume_from:
+        model.load_state_dict(torch.load(args.resume_from, map_location=device))
+        print(f"Loaded checkpoint: {args.resume_from}")
+
     # Loss & Optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    # ReduceLROnPlateau: val acc 기준, 3 epoch 개선 없으면 LR 절반
+    # ReduceLROnPlateau: val acc based on, 3 epochs without improvement, LR is halved
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='max',     # accuracy based (higher is better)
@@ -40,7 +50,7 @@ def main():
     )
 
     # Hyperparams
-    EPOCHS  = 20
+    EPOCHS  = 50 #to see LR being halved
     PATIENCE = 5
 
     # History

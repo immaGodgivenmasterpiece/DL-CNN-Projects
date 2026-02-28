@@ -10,7 +10,7 @@ Each project is self-contained with its own notebook, scripts, results, and READ
 | # | Project | Dataset | Best Accuracy | Status |
 |---|---|---|---|---|
 | 1 | [MNIST CNN](./1_MNIST_CNN/) | MNIST (handwritten digits) | 99.35% | ✅ Done |
-| 2 | CIFAR-10 CNN | CIFAR-10 (10 object classes) | — | 🔜 Next |
+| 2 | [CIFAR-10 CNN](./2_CIFAR10_CNN/) | CIFAR-10 (10 object classes) | 79.48% | 🔄 In Progress |
 | 3 | Basketball Action Classifier | Custom NBA dataset | — | 🔜 Planned |
 
 ---
@@ -19,7 +19,7 @@ Each project is self-contained with its own notebook, scripts, results, and READ
 
 ```
 1_MNIST_CNN          → CNN basics, PyTorch training loop, Early Stopping
-2_CIFAR_10_CNN       → Color images, Batch Normalization, LR Scheduler, Transfer Learning
+2_CIFAR10_CNN        → Color images, Batch Normalization, LR Scheduler
 3_Basketball_CNN     → Real-world data pipeline, Kaggle-style end-to-end project
 ```
 
