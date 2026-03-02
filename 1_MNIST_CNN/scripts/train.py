@@ -1,128 +1,94 @@
-"""
-train.py
---------
-End-to-end training script for MNIST CNN.
-
-Usage (from project root):
-    python scripts/train.py            # fresh training (random init)
-    python scripts/train.py --resume   # continue from best_model.pth
-"""
-
-import argparse
 import os
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
 
 from model import SimpleCNN
-from utils import train, evaluate, plot_history, plot_confusion_matrix, plot_wrong_predictions
+from utils import (get_device, get_dataloaders, train_one_epoch, evaluate,
+                   plot_history, plot_confusion_matrix, plot_wrong_predictions)
 
-
-# ─────────────────────────────────────────
-# Args
-# ─────────────────────────────────────────
-parser = argparse.ArgumentParser()
-parser.add_argument('--resume', action='store_true',
-                    help='Resume training from best_model.pth instead of random init')
-args = parser.parse_args()
-
-
-# ─────────────────────────────────────────
-# Config
-# ─────────────────────────────────────────
-BATCH_SIZE  = 64
-EPOCHS      = 20
-LR          = 0.001
-PATIENCE    = 3
-RESULTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'results')
+# ── Paths ────────────────────────────────────────────────────────────────────
+SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(SCRIPT_DIR)                    # 1_MNIST_CNN/
+RESULTS_DIR = os.path.join(PROJECT_DIR, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-
-# ─────────────────────────────────────────
-# Data
-# ─────────────────────────────────────────
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))   # pixel → [-1, 1]
-])
-
-train_dataset = datasets.MNIST(root='./data', train=True,  download=True,  transform=transform)
-test_dataset  = datasets.MNIST(root='./data', train=False, download=False, transform=transform)
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader  = DataLoader(test_dataset,  batch_size=BATCH_SIZE, shuffle=False)
+BEST_MODEL_PATH = os.path.join(RESULTS_DIR, "best_model.pth")
 
 
-# ─────────────────────────────────────────
-# Model / Loss / Optimizer
-# ─────────────────────────────────────────
-model     = SimpleCNN()
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=LR)
+# ── Training Loop ─────────────────────────────────────────────────────────────
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--resume-from", type=str, default=None,
+                        help="Path to a .pth checkpoint to resume training from")
+    args = parser.parse_args()
 
-best_model_path = os.path.join(RESULTS_DIR, 'best_model.pth')
+    device = get_device()
+    print(f"Using device: {device}")
 
-if args.resume and os.path.exists(best_model_path):
-    model.load_state_dict(torch.load(best_model_path, weights_only=True))
-    print(f"Resumed from {best_model_path}")
-else:
-    if args.resume:
-        print("No checkpoint found, starting fresh.")
-    print("Training from random initialization.")
+    # Data
+    train_loader, test_loader = get_dataloaders(batch_size=64)
+
+    # Model
+    model = SimpleCNN().to(device)
+
+    if args.resume_from:
+        model.load_state_dict(torch.load(args.resume_from, map_location=device))
+        print(f"Loaded checkpoint: {args.resume_from}")
+
+    # Loss & Optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    # Hyperparams
+    EPOCHS  = 20
+    PATIENCE = 3
+
+    # History
+    train_losses, test_losses = [], []
+    train_accs,   test_accs   = [], []
+
+    # Early stopping state
+    best_acc = 0.0
+    counter  = 0
+
+    for epoch in range(EPOCHS):
+        tr_loss, tr_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        te_loss, te_acc = evaluate(model, test_loader, criterion, device)
+
+        train_losses.append(tr_loss);  test_losses.append(te_loss)
+        train_accs.append(tr_acc);     test_accs.append(te_acc)
+
+        print(f"Epoch [{epoch+1}/{EPOCHS}]")
+        print(f"  Train Loss: {tr_loss:.4f} | Train Acc: {tr_acc:.2f}%")
+        print(f"  Test  Loss: {te_loss:.4f} | Test  Acc: {te_acc:.2f}%")
+
+        # Early stopping + best model save
+        if te_acc > best_acc:
+            best_acc = te_acc
+            counter  = 0
+            torch.save(model.state_dict(), BEST_MODEL_PATH)
+            print(f"  ✓ Best model saved (acc: {best_acc:.2f}%)")
+        else:
+            counter += 1
+            print(f"  patience: {counter}/{PATIENCE}")
+            if counter >= PATIENCE:
+                print(f"\nEarly stopping triggered. Best Test Acc: {best_acc:.2f}%")
+                break
+
+    # Load best model
+    model.load_state_dict(torch.load(BEST_MODEL_PATH))
+    print("\nBest model loaded!")
+
+    # Visualize
+    plot_history(train_losses, test_losses, train_accs, test_accs,
+                 save_path=os.path.join(RESULTS_DIR, "loss_acc_curves.png"))
+    plot_confusion_matrix(model, test_loader, device,
+                          save_path=os.path.join(RESULTS_DIR, "confusion_matrix.png"))
+    plot_wrong_predictions(model, test_loader, device, n=16,
+                           save_path=os.path.join(RESULTS_DIR, "wrong_predictions.png"))
 
 
-# ─────────────────────────────────────────
-# Training loop with Early Stopping
-# ─────────────────────────────────────────
-best_acc      = 0.0
-counter       = 0
-train_losses, test_losses = [], []
-train_accs,   test_accs   = [], []
-
-for epoch in range(EPOCHS):
-    tr_loss, tr_acc = train(model, train_loader, criterion, optimizer)
-    te_loss, te_acc = evaluate(model, test_loader, criterion)
-
-    train_losses.append(tr_loss);  test_losses.append(te_loss)
-    train_accs.append(tr_acc);     test_accs.append(te_acc)
-
-    print(f"Epoch [{epoch+1}/{EPOCHS}]")
-    print(f"  Train Loss: {tr_loss:.4f} | Train Acc: {tr_acc:.2f}%")
-    print(f"  Test  Loss: {te_loss:.4f} | Test  Acc: {te_acc:.2f}%")
-
-    if te_acc > best_acc:
-        best_acc = te_acc
-        counter  = 0
-        torch.save(model.state_dict(), best_model_path)
-        print(f"  ✓ Best model saved! (acc: {best_acc:.2f}%)")
-    else:
-        counter += 1
-        print(f"  patience: {counter}/{PATIENCE}")
-        if counter >= PATIENCE:
-            print(f"\nEarly stopping at epoch {epoch+1}. Best Test Acc: {best_acc:.2f}%")
-            break
-
-# Load best weights
-model.load_state_dict(torch.load(best_model_path, weights_only=True))
-print("Best model loaded!")
-
-# Save loss/acc curves
-plot_history(
-    train_losses, test_losses,
-    train_accs,   test_accs,
-    save_path=os.path.join(RESULTS_DIR, 'loss_acc_curves.png')
-)
-
-# Save confusion matrix
-plot_confusion_matrix(
-    model, test_loader,
-    save_path=os.path.join(RESULTS_DIR, 'confusion_matrix.png')
-)
-
-# Save wrong predictions gallery
-plot_wrong_predictions(
-    model, test_loader, n=16,
-    save_path=os.path.join(RESULTS_DIR, 'wrong_predictions.png')
-)
+if __name__ == "__main__":
+    main()

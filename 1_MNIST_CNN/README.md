@@ -96,7 +96,7 @@ These are the hardest cases for any MNIST model and reflect real visual ambiguit
 ├── scripts/
 │   ├── model.py                       ← SimpleCNN definition
 │   ├── train.py                       ← end-to-end training script
-│   └── utils.py                       ← train/evaluate + all visualization helpers
+│   └── utils.py                       ← shared: get_device, train, evaluate, plot helpers
 ├── results/                           ← saved .pth checkpoint + .png plots
 ├── data/                              ← MNIST downloaded here (gitignored)
 └── README.md
@@ -108,12 +108,12 @@ These are the hardest cases for any MNIST model and reflect real visual ambiguit
 
 ```bash
 # From the 1_MNIST_CNN/ directory
-python scripts/train.py            # fresh training (random init)
-python scripts/train.py --resume   # continue from best_model.pth
+python scripts/train.py                                          # fresh training
+python scripts/train.py --resume-from results/best_model.pth    # resume from checkpoint
 ```
 
-- **Default**: Random initialization → train from scratch
-- **`--resume`**: Load previous checkpoint and continue training
+- **Default**: fresh training from random initialization
+- **`--resume-from`**: load a `.pth` checkpoint and continue training
 
 After training, the following are saved to `results/`:
 - `best_model.pth` — best checkpoint
