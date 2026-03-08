@@ -11,7 +11,7 @@ Each project is self-contained with its own notebook, scripts, results, and READ
 |---|---|---|---|---|
 | 1 | [MNIST CNN](./1_MNIST_CNN/) | MNIST (handwritten digits) | 99.35% | ✅ Done |
 | 2 | [CIFAR-10 CNN](./2_CIFAR10_CNN/) | CIFAR-10 (10 object classes) | 81.04% | ✅ Done |
-| 3 | Basketball Action Classifier | Custom NBA dataset | — | 🔜 Planned |
+| 3 | [Sports Classification](./3_Transfer_Learning/) | Sports (100 classes, Kaggle) | — | 🔧 In Progress |
 
 ---
 
@@ -20,7 +20,7 @@ Each project is self-contained with its own notebook, scripts, results, and READ
 ```
 1_MNIST_CNN          → CNN basics, PyTorch training loop, Early Stopping
 2_CIFAR10_CNN        → Color images, Batch Normalization, LR Scheduler (scratch CNN ceiling: ~81%)
-3_Basketball_CNN     → Transfer Learning, Data Augmentation, real-world data pipeline
+3_Transfer_Learning  → Transfer Learning, Data Augmentation, 100-class sports dataset
 ```
 
 Each project answers:

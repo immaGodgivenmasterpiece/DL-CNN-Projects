@@ -8,10 +8,10 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 
+# Claude
+CLAUDE.md
+
 # OS
 .DS_Store
-
-#clade
-claude/
 
 
